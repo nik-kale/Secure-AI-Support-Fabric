@@ -5,6 +5,7 @@ Provides API key-based authentication for all services
 """
 import os
 import logging
+import threading
 from functools import wraps
 from flask import request, jsonify
 from typing import Set, Callable, Any
@@ -110,20 +111,27 @@ def setup_auth_error_handlers(app):
         }), error.status_code
 
 
-# Singleton instance for convenience
+# Singleton instance for convenience with thread safety
 _auth_instance = None
+_auth_lock = threading.Lock()
 
 
 def get_auth() -> APIKeyAuth:
     """
-    Get or create singleton auth instance
+    Get or create singleton auth instance (thread-safe with double-checked locking)
 
     Returns:
         APIKeyAuth instance
     """
     global _auth_instance
+
+    # First check without lock for performance
     if _auth_instance is None:
-        _auth_instance = APIKeyAuth()
+        with _auth_lock:
+            # Double-check inside lock to prevent race condition
+            if _auth_instance is None:
+                _auth_instance = APIKeyAuth()
+
     return _auth_instance
 
 

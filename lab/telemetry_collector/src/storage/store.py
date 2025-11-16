@@ -25,11 +25,22 @@ class TelemetryStore:
     def connection(self):
         """Thread-local connection for connection pooling"""
         if not hasattr(self._local, 'connection'):
-            self._local.connection = sqlite3.connect(
+            conn = sqlite3.connect(
                 self.storage_path,
                 check_same_thread=False,
-                timeout=10.0
+                timeout=10.0,
+                isolation_level=None  # Autocommit mode for WAL
             )
+            # Enable WAL mode for better concurrency
+            conn.execute('PRAGMA journal_mode=WAL')
+            # Set synchronous mode to NORMAL for better performance
+            conn.execute('PRAGMA synchronous=NORMAL')
+            # Set cache size to 10MB
+            conn.execute('PRAGMA cache_size=-10000')
+            # Enable foreign keys
+            conn.execute('PRAGMA foreign_keys=ON')
+            self._local.connection = conn
+            logger.debug(f"Created new database connection for thread {threading.get_ident()}")
         return self._local.connection
 
     @contextmanager
