@@ -3,11 +3,20 @@ Main AI engine coordinating detection and remediation
 This is a simplified "agentic" system using rules and mock AI logic
 """
 import os
+import sys
 import requests
 from typing import List, Dict, Any
+
+# Add parent directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
+
+from lab.common.logging_config import setup_logging
 from .detectors import AnomalyDetectorEngine
 from .remediation import RemediationEngine
 from .models import Finding, RemediationPlan
+
+# Setup logging
+logger = setup_logging('agentic_ai.engine')
 
 class AIEngine:
     """Main AI-Support Fabric engine"""
@@ -44,13 +53,15 @@ class AIEngine:
 
             if response.status_code == 200:
                 data = response.json()
+                telemetry_count = len(data.get('telemetry', []))
+                logger.info(f"Fetched {telemetry_count} telemetry entries")
                 return data.get('telemetry', [])
             else:
-                print(f'Error fetching telemetry: {response.status_code}')
+                logger.error(f"Error fetching telemetry: HTTP {response.status_code}")
                 return []
 
         except Exception as e:
-            print(f'Exception fetching telemetry: {e}')
+            logger.exception(f"Exception fetching telemetry: {e}")
             return []
 
     def run_detection(self) -> List[Finding]:
@@ -59,11 +70,13 @@ class AIEngine:
         telemetry = self.fetch_telemetry(limit=200)
 
         if not telemetry:
-            print('No telemetry data available')
+            logger.warning('No telemetry data available for analysis')
             return []
 
         # Run detection
+        logger.info(f"Running detection on {len(telemetry)} telemetry entries")
         findings = self.detector_engine.analyze_telemetry(telemetry)
+        logger.info(f"Detection complete: {len(findings)} findings identified")
 
         # Cache findings
         self.findings_cache.extend(findings)

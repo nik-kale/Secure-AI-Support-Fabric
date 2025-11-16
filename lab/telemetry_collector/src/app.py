@@ -9,11 +9,20 @@ import json
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from marshmallow import ValidationError
 
 # Add parent directory to path for lab.common imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
 
 from lab.common.auth import require_auth, setup_auth_error_handlers
+from lab.common.schemas import (
+    LogTelemetrySchema,
+    MetricTelemetrySchema,
+    ConfigTelemetrySchema,
+    TelemetryQuerySchema,
+    validate_request,
+    get_validation_errors
+)
 from .storage.store import TelemetryStore
 
 app = Flask(__name__)
@@ -49,9 +58,8 @@ def health():
 def ingest_logs():
     """Ingest log telemetry"""
     try:
-        data = request.json
-        if not data:
-            return jsonify({'error': 'No data provided'}), 400
+        # Validate input
+        data = validate_request(LogTelemetrySchema, request.json)
 
         # Add metadata
         data['ingested_at'] = datetime.utcnow().isoformat()
@@ -65,6 +73,8 @@ def ingest_logs():
             'telemetry_id': telemetry_id,
             'message': 'Log telemetry ingested successfully'
         }), 201
+    except ValidationError as e:
+        return jsonify(get_validation_errors(e)), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -73,9 +83,8 @@ def ingest_logs():
 def ingest_metrics():
     """Ingest metric telemetry"""
     try:
-        data = request.json
-        if not data:
-            return jsonify({'error': 'No data provided'}), 400
+        # Validate input
+        data = validate_request(MetricTelemetrySchema, request.json)
 
         # Add metadata
         data['ingested_at'] = datetime.utcnow().isoformat()
@@ -89,6 +98,8 @@ def ingest_metrics():
             'telemetry_id': telemetry_id,
             'message': 'Metric telemetry ingested successfully'
         }), 201
+    except ValidationError as e:
+        return jsonify(get_validation_errors(e)), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -97,9 +108,8 @@ def ingest_metrics():
 def ingest_config():
     """Ingest configuration change events"""
     try:
-        data = request.json
-        if not data:
-            return jsonify({'error': 'No data provided'}), 400
+        # Validate input
+        data = validate_request(ConfigTelemetrySchema, request.json)
 
         # Add metadata
         data['ingested_at'] = datetime.utcnow().isoformat()
@@ -113,6 +123,8 @@ def ingest_config():
             'telemetry_id': telemetry_id,
             'message': 'Config telemetry ingested successfully'
         }), 201
+    except ValidationError as e:
+        return jsonify(get_validation_errors(e)), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
