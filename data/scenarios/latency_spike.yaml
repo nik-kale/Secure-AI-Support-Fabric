@@ -1,0 +1,39 @@
+name: scenario_latency_spike
+description: Simulates a latency spike scenario with slow requests and high CPU usage
+severity: HIGH
+telemetry_types:
+  - logs
+  - metrics
+
+expected_findings:
+  - Latency Spike Detected
+  - High CPU usage
+
+scenario_data:
+  logs:
+    count: 15
+    generator: latency_spike
+    parameters:
+      threshold_ms: 1000
+      duration_range: [5000, 15000]
+
+  metrics:
+    count: 5
+    generator: high_cpu
+    parameters:
+      cpu_range: [85, 99]
+      latency_range: [2000, 8000]
+
+detection_expected: true
+remediation_expected: true
+
+notes: |
+  This scenario simulates a service experiencing latency issues due to high load.
+  Expected detections:
+  - Latency spike in request processing
+  - High CPU utilization
+
+  Expected remediation recommendations:
+  - Investigate current load
+  - Check database performance
+  - Consider scaling resources

@@ -1,0 +1,335 @@
+# OWASP AI Security Checklist for AI Support Fabric Lab
+# Based on OWASP Top 10 for LLM Applications
+
+version: "1.0"
+last_updated: "2025-01-15"
+scope: "Educational Lab (not production-ready)"
+
+categories:
+  - name: "LLM01: Prompt Injection"
+    applicable: false
+    reason: "Lab uses rule-based detection, not LLMs"
+    future_considerations:
+      - description: "If integrating LLMs, validate telemetry input"
+        priority: "HIGH"
+        status: "NOT_IMPLEMENTED"
+      - description: "Sanitize user-provided telemetry data"
+        priority: "HIGH"
+        status: "NOT_IMPLEMENTED"
+      - description: "Implement input/output guardrails"
+        priority: "HIGH"
+        status: "NOT_IMPLEMENTED"
+
+  - name: "LLM02: Insecure Output Handling"
+    applicable: true
+    checks:
+      - id: "LLM02-01"
+        description: "Remediation commands are not auto-executed"
+        status: "PASS"
+        evidence: "All remediation plans are guidance-only, require manual execution"
+
+      - id: "LLM02-02"
+        description: "High-risk commands flagged for approval"
+        status: "PASS"
+        evidence: "Steps include 'requires_approval' flag"
+
+      - id: "LLM02-03"
+        description: "Command validation before execution"
+        status: "FAIL"
+        remediation: "Implement command whitelisting/validation"
+        priority: "MEDIUM"
+
+  - name: "LLM03: Training Data Poisoning"
+    applicable: false
+    reason: "No ML model training in lab"
+    future_considerations:
+      - description: "Validate training data sources if ML added"
+        priority: "HIGH"
+        status: "NOT_APPLICABLE"
+
+  - name: "LLM04: Model Denial of Service"
+    applicable: true
+    checks:
+      - id: "LLM04-01"
+        description: "Rate limiting on analysis endpoint"
+        status: "FAIL"
+        remediation: "Implement rate limiting"
+        priority: "MEDIUM"
+
+      - id: "LLM04-02"
+        description: "Input size limits on telemetry"
+        status: "FAIL"
+        remediation: "Add request size validation"
+        priority: "MEDIUM"
+
+      - id: "LLM04-03"
+        description: "Timeout on expensive operations"
+        status: "PARTIAL"
+        evidence: "HTTP client timeouts set, but no analysis timeout"
+        remediation: "Add analysis execution timeout"
+        priority: "LOW"
+
+  - name: "LLM05: Supply Chain Vulnerabilities"
+    applicable: true
+    checks:
+      - id: "LLM05-01"
+        description: "Dependencies pinned to specific versions"
+        status: "PASS"
+        evidence: "requirements.txt specifies exact versions"
+
+      - id: "LLM05-02"
+        description: "Dependency vulnerability scanning"
+        status: "FAIL"
+        remediation: "Integrate Snyk or Safety for dependency scanning"
+        priority: "MEDIUM"
+
+      - id: "LLM05-03"
+        description: "Use official base images"
+        status: "PASS"
+        evidence: "python:3.11-slim from Docker Hub official"
+
+      - id: "LLM05-04"
+        description: "Regular dependency updates"
+        status: "MANUAL"
+        evidence: "Requires manual monitoring"
+        remediation: "Set up Dependabot or Renovate"
+        priority: "LOW"
+
+  - name: "LLM06: Sensitive Information Disclosure"
+    applicable: true
+    checks:
+      - id: "LLM06-01"
+        description: "No hardcoded secrets in code"
+        status: "PASS"
+        evidence: "All config via environment variables"
+
+      - id: "LLM06-02"
+        description: "Telemetry does not contain real credentials"
+        status: "PASS"
+        evidence: "Synthetic data only"
+
+      - id: "LLM06-03"
+        description: "API responses do not leak sensitive details"
+        status: "PARTIAL"
+        evidence: "Error messages could be more generic"
+        remediation: "Implement generic error responses in production"
+        priority: "LOW"
+
+      - id: "LLM06-04"
+        description: "Database encryption at rest"
+        status: "FAIL"
+        remediation: "Implement SQLCipher or encrypted volume"
+        priority: "LOW"
+        note: "Not critical for lab with synthetic data"
+
+  - name: "LLM07: Insecure Plugin Design"
+    applicable: false
+    reason: "No plugin system in current design"
+    future_considerations:
+      - description: "If adding plugins, implement sandbox execution"
+        priority: "HIGH"
+        status: "NOT_APPLICABLE"
+
+  - name: "LLM08: Excessive Agency"
+    applicable: true
+    checks:
+      - id: "LLM08-01"
+        description: "Remediation requires human approval"
+        status: "PASS"
+        evidence: "No automatic execution, human-in-the-loop design"
+
+      - id: "LLM08-02"
+        description: "High-risk actions explicitly flagged"
+        status: "PASS"
+        evidence: "'requires_approval' field on risky steps"
+
+      - id: "LLM08-03"
+        description: "Audit trail of AI-suggested actions"
+        status: "PARTIAL"
+        evidence: "Findings cached but no persistent audit log"
+        remediation: "Add persistent audit logging"
+        priority: "MEDIUM"
+
+  - name: "LLM09: Overreliance"
+    applicable: true
+    checks:
+      - id: "LLM09-01"
+        description: "Findings include confidence/evidence"
+        status: "PASS"
+        evidence: "All findings include evidence and severity"
+
+      - id: "LLM09-02"
+        description: "Educational documentation warns against blind trust"
+        status: "PASS"
+        evidence: "Lab guide and notebooks emphasize verification"
+
+      - id: "LLM09-03"
+        description: "Remediation includes verification steps"
+        status: "PASS"
+        evidence: "Plans include monitoring/verification steps"
+
+  - name: "LLM10: Model Theft"
+    applicable: false
+    reason: "Detection rules are open-source by design"
+    future_considerations:
+      - description: "If using proprietary LLM, implement access controls"
+        priority: "MEDIUM"
+        status: "NOT_APPLICABLE"
+
+# Additional Security Controls
+
+additional_controls:
+  authentication:
+    - id: "AUTH-01"
+      description: "API authentication required"
+      status: "FAIL"
+      remediation: "Implement JWT or API key authentication"
+      priority: "HIGH"
+      note: "Critical for production, low priority for isolated lab"
+
+  authorization:
+    - id: "AUTHZ-01"
+      description: "Role-based access control (RBAC)"
+      status: "FAIL"
+      remediation: "Implement RBAC for multi-user scenarios"
+      priority: "MEDIUM"
+
+  network_security:
+    - id: "NET-01"
+      description: "Services isolated in Docker network"
+      status: "PASS"
+      evidence: "Docker Compose network isolation"
+
+    - id: "NET-02"
+      description: "TLS/HTTPS for API endpoints"
+      status: "FAIL"
+      remediation: "Enable HTTPS with certificates"
+      priority: "HIGH"
+      note: "Required for production deployment"
+
+    - id: "NET-03"
+      description: "mTLS for service-to-service communication"
+      status: "FAIL"
+      remediation: "Implement mutual TLS between services"
+      priority: "MEDIUM"
+
+  data_protection:
+    - id: "DATA-01"
+      description: "Sensitive data redaction in logs"
+      status: "PASS"
+      evidence: "No real sensitive data in synthetic telemetry"
+
+    - id: "DATA-02"
+      description: "Data retention policies"
+      status: "FAIL"
+      remediation: "Implement automatic telemetry rotation"
+      priority: "LOW"
+
+  monitoring:
+    - id: "MON-01"
+      description: "Health check endpoints"
+      status: "PASS"
+      evidence: "All services implement /health"
+
+    - id: "MON-02"
+      description: "Centralized logging"
+      status: "FAIL"
+      remediation: "Integrate with ELK/Splunk"
+      priority: "LOW"
+
+    - id: "MON-03"
+      description: "Security event alerting"
+      status: "FAIL"
+      remediation: "Implement SIEM integration"
+      priority: "MEDIUM"
+
+  incident_response:
+    - id: "IR-01"
+      description: "Incident response plan documented"
+      status: "PARTIAL"
+      evidence: "Basic IR in threat_model.md"
+      remediation: "Develop comprehensive IR playbook"
+      priority: "LOW"
+
+# Summary Statistics
+
+summary:
+  total_checks: 23
+  pass: 11
+  fail: 9
+  partial: 3
+  not_applicable: 0
+
+  by_priority:
+    high: 3
+    medium: 7
+    low: 5
+
+# Recommendations for Production Deployment
+
+production_readiness:
+  critical_items:
+    - "Implement authentication (AUTH-01)"
+    - "Enable HTTPS/TLS (NET-02)"
+    - "Add rate limiting (LLM04-01, LLM04-02)"
+    - "Implement dependency scanning (LLM05-02)"
+
+  important_items:
+    - "Add authorization/RBAC (AUTHZ-01)"
+    - "Implement audit logging (LLM08-03)"
+    - "Add mTLS for services (NET-03)"
+    - "Security monitoring (MON-03)"
+
+  nice_to_have:
+    - "Database encryption (LLM06-04)"
+    - "Automated dependency updates (LLM05-04)"
+    - "Centralized logging (MON-02)"
+    - "Data retention policies (DATA-02)"
+
+# Testing Recommendations
+
+testing:
+  - type: "Unit Tests"
+    description: "Test individual detectors and remediation logic"
+    status: "NOT_IMPLEMENTED"
+
+  - type: "Integration Tests"
+    description: "Test end-to-end flows"
+    status: "NOT_IMPLEMENTED"
+
+  - type: "Security Tests"
+    description: "Automated security scanning"
+    tools:
+      - "OWASP ZAP"
+      - "Bandit (Python security linter)"
+      - "Trivy (container scanning)"
+    status: "NOT_IMPLEMENTED"
+
+  - type: "Penetration Testing"
+    description: "Manual security assessment"
+    status: "NOT_IMPLEMENTED"
+    note: "Recommended before any production use"
+
+# Compliance Notes
+
+compliance:
+  note: |
+    This lab is designed for education and research only.
+    It is NOT compliant with:
+    - SOC 2
+    - GDPR (if real user data used)
+    - HIPAA
+    - PCI-DSS
+
+    Do not use with production data or in regulated environments
+    without significant security hardening.
+
+# Review and Updates
+
+review_schedule:
+  frequency: "Quarterly or on significant changes"
+  last_review: "2025-01-15"
+  next_review: "2025-04-15"
+  reviewers:
+    - "Security team"
+    - "Development team"

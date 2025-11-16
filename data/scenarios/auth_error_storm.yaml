@@ -1,0 +1,46 @@
+name: scenario_auth_error_storm
+description: Simulates a brute-force or credential stuffing attack with multiple authentication failures
+severity: HIGH
+telemetry_types:
+  - logs
+  - metrics
+
+expected_findings:
+  - Authentication Failure Storm Detected
+
+scenario_data:
+  logs:
+    count: 30
+    generator: auth_failure
+    parameters:
+      unique_users: 5
+      unique_ips: 3
+
+  metrics:
+    count: 3
+    generator: high_cpu
+    parameters:
+      cpu_range: [70, 85]
+
+detection_expected: true
+remediation_expected: true
+
+notes: |
+  This scenario simulates a potential security attack via repeated authentication attempts.
+
+  Characteristics:
+  - Multiple failed login attempts from same IPs
+  - Failed attempts across multiple user accounts
+  - Increased CPU load due to authentication processing
+
+  Expected detections:
+  - Authentication failure storm
+  - Potential brute-force attack
+  - Possible credential stuffing
+
+  Expected remediation recommendations:
+  - Enable rate limiting on auth endpoints
+  - Implement account lockout policies
+  - Block suspicious IP addresses
+  - Enable MFA for affected accounts
+  - Alert security team

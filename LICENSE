@@ -1,0 +1,51 @@
+MIT License
+
+Copyright (c) 2025 AI Support Fabric Lab Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+EDUCATIONAL USE DISCLAIMER
+
+This software is designed for educational and research purposes only. It is
+not intended for production use without significant security hardening and
+professional review.
+
+Users are solely responsible for:
+- Ensuring compliance with applicable laws and regulations
+- Implementing appropriate security controls
+- Protecting sensitive data
+- Following organizational security policies
+
+The authors and contributors assume no liability for:
+- Security vulnerabilities
+- Data breaches or data loss
+- Service outages or availability issues
+- Compliance violations
+- Any damages resulting from use or misuse
+
+DO NOT use this software with:
+- Production credentials or secrets
+- Real user data or personally identifiable information (PII)
+- Regulated data (PHI, PCI, financial data, etc.)
+- Mission-critical systems
+
+For production deployment, consult qualified security professionals and conduct
+thorough security audits.

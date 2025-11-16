@@ -1,0 +1,43 @@
+name: scenario_config_drift
+description: Simulates configuration drift where critical security settings are changed
+severity: CRITICAL
+telemetry_types:
+  - config
+  - logs
+
+expected_findings:
+  - Configuration Drift Detected
+
+scenario_data:
+  config:
+    count: 1
+    generator: config_drift
+    parameters:
+      drift_type: debug_enabled  # Options: debug_enabled, auth_disabled, tls_disabled
+
+  logs:
+    count: 5
+    generator: normal
+    parameters: {}
+
+detection_expected: true
+remediation_expected: true
+
+notes: |
+  This scenario simulates unauthorized or accidental configuration changes.
+
+  Drift types available:
+  - debug_enabled: Debug mode and verbose logging enabled (security risk)
+  - auth_disabled: Authentication disabled (critical security issue)
+  - tls_disabled: TLS/SSL disabled (critical security issue)
+  - excessive_connections: Connection limits drastically increased
+
+  Expected detections:
+  - Configuration drift from baseline
+  - Unauthorized configuration change
+
+  Expected remediation recommendations:
+  - Verify configuration change authorization
+  - Assess security impact
+  - Rollback to baseline if unauthorized
+  - Enable config change monitoring

@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  telemetry_collector:
+    build:
+      context: ./lab/telemetry_collector
+      dockerfile: Dockerfile
+    container_name: telemetry_collector
+    ports:
+      - "8081:8081"
+    environment:
+      - DEBUG=${DEBUG:-false}
+      - TELEMETRY_STORAGE_PATH=/data/telemetry.db
+    volumes:
+      - telemetry_data:/data
+    networks:
+      - lab_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  agentic_ai:
+    build:
+      context: ./lab/agentic_ai
+      dockerfile: Dockerfile
+    container_name: agentic_ai
+    ports:
+      - "8082:8082"
+    environment:
+      - DEBUG=${DEBUG:-false}
+      - TELEMETRY_COLLECTOR_URL=http://telemetry_collector:8081
+    depends_on:
+      - telemetry_collector
+    networks:
+      - lab_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  gateway:
+    build:
+      context: ./lab/gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - DEBUG=${DEBUG:-false}
+      - TELEMETRY_COLLECTOR_URL=http://telemetry_collector:8081
+      - AGENTIC_AI_URL=http://agentic_ai:8082
+      - UI_DASH_URL=http://ui_dash:3000
+    depends_on:
+      - telemetry_collector
+      - agentic_ai
+    networks:
+      - lab_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  ui_dash:
+    build:
+      context: ./lab/ui_dash
+      dockerfile: Dockerfile
+    container_name: ui_dash
+    ports:
+      - "3000:3000"
+    environment:
+      - DEBUG=${DEBUG:-false}
+      - GATEWAY_URL=http://gateway:8080
+    depends_on:
+      - gateway
+    networks:
+      - lab_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  lab_network:
+    driver: bridge
+
+volumes:
+  telemetry_data:
