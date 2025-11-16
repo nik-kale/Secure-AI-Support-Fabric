@@ -5,6 +5,7 @@ This is a simplified "agentic" system using rules and mock AI logic
 import os
 import sys
 import requests
+from collections import deque
 from typing import List, Dict, Any
 
 # Add parent directory to path
@@ -23,7 +24,9 @@ class AIEngine:
 
     def __init__(
         self,
-        telemetry_collector_url: str = None
+        telemetry_collector_url: str = None,
+        max_findings_cache: int = 100,
+        max_remediation_cache: int = 100
     ):
         self.telemetry_collector_url = telemetry_collector_url or os.getenv(
             'TELEMETRY_COLLECTOR_URL',
@@ -31,8 +34,15 @@ class AIEngine:
         )
         self.detector_engine = AnomalyDetectorEngine()
         self.remediation_engine = RemediationEngine()
-        self.findings_cache = []
-        self.remediation_cache = []
+
+        # Use deque with maxlen for automatic size limiting (memory safe)
+        self.findings_cache = deque(maxlen=max_findings_cache)
+        self.remediation_cache = deque(maxlen=max_remediation_cache)
+
+        logger.info(
+            f"AI Engine initialized with cache limits: "
+            f"findings={max_findings_cache}, remediation={max_remediation_cache}"
+        )
 
     def fetch_telemetry(
         self,
