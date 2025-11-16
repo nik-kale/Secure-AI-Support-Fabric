@@ -14,7 +14,8 @@ try:
     JOBLIB_AVAILABLE = True
 except ImportError:
     JOBLIB_AVAILABLE = False
-    print("WARNING: joblib not installed. Model persistence disabled. Install with: pip install joblib")
+    import warnings
+    warnings.warn("joblib not installed. Model persistence disabled. Install with: pip install joblib", ImportWarning)
 
 try:
     from sklearn.ensemble import IsolationForest

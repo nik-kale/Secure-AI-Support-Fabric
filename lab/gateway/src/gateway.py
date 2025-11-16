@@ -3,14 +3,37 @@ API Gateway Service
 Routes requests to appropriate services and handles context propagation
 """
 import os
+import sys
 import uuid
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 
+# Add parent directory to path for lab.common imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
+
+from lab.common.auth import require_auth, setup_auth_error_handlers
+from lab.common.logging_config import setup_logging
+
+# Setup logging
+logger = setup_logging('gateway')
+
 app = Flask(__name__)
-CORS(app)
+
+# Secure CORS - restrict to allowed origins only
+allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+CORS(app, resources={
+    r"/api/*": {
+        "origins": allowed_origins,
+        "methods": ["GET", "POST", "PUT", "DELETE"],
+        "allow_headers": ["Content-Type", "X-API-Key", "X-Request-ID"],
+        "expose_headers": ["X-Request-ID"]
+    }
+})
+
+# Setup authentication error handlers
+setup_auth_error_handlers(app)
 
 # Service URLs
 TELEMETRY_COLLECTOR_URL = os.getenv('TELEMETRY_COLLECTOR_URL', 'http://telemetry_collector:8081')
@@ -63,10 +86,14 @@ def health():
 
 # Telemetry routes
 @app.route('/api/telemetry/<path:subpath>', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@require_auth
 def proxy_telemetry(subpath):
     """Proxy requests to telemetry collector"""
     try:
         headers = add_context_headers(dict(request.headers))
+        # Forward API key to backend service
+        if 'X-API-Key' in request.headers:
+            headers['X-API-Key'] = request.headers.get('X-API-Key')
 
         url = f'{TELEMETRY_COLLECTOR_URL}/api/telemetry/{subpath}'
 
@@ -91,10 +118,14 @@ def proxy_telemetry(subpath):
 
 # AI engine routes
 @app.route('/api/ai/<path:subpath>', methods=['GET', 'POST'])
+@require_auth
 def proxy_ai(subpath):
     """Proxy requests to agentic AI engine"""
     try:
         headers = add_context_headers(dict(request.headers))
+        # Forward API key to backend service
+        if 'X-API-Key' in request.headers:
+            headers['X-API-Key'] = request.headers.get('X-API-Key')
 
         url = f'{AGENTIC_AI_URL}/api/{subpath}'
 
@@ -115,11 +146,16 @@ def proxy_ai(subpath):
 
 # Convenience endpoints
 @app.route('/api/status', methods=['GET'])
+@require_auth
 def get_status():
     """Get overall system status"""
     try:
         # Get telemetry stats
         headers = add_context_headers()
+        # Forward API key to backend services
+        if 'X-API-Key' in request.headers:
+            headers['X-API-Key'] = request.headers.get('X-API-Key')
+
         telemetry_resp = requests.get(
             f'{TELEMETRY_COLLECTOR_URL}/api/telemetry/stats',
             headers=headers,
@@ -150,10 +186,14 @@ def get_status():
 
 
 @app.route('/api/run-analysis', methods=['POST'])
+@require_auth
 def run_analysis():
     """Trigger a full analysis cycle"""
     try:
         headers = add_context_headers()
+        # Forward API key to backend service
+        if 'X-API-Key' in request.headers:
+            headers['X-API-Key'] = request.headers.get('X-API-Key')
 
         # Trigger AI analysis
         resp = requests.post(

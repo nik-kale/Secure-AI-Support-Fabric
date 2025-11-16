@@ -4,9 +4,12 @@ Authentication middleware for AI Support Fabric Lab
 Provides API key-based authentication for all services
 """
 import os
+import logging
 from functools import wraps
 from flask import request, jsonify
 from typing import Set, Callable, Any
+
+logger = logging.getLogger(__name__)
 
 
 class AuthenticationError(Exception):
@@ -34,7 +37,7 @@ class APIKeyAuth:
                 self.valid_keys = set(k.strip() for k in keys_str.split(',') if k.strip())
             else:
                 # Development mode: use a default key with warning
-                print("WARNING: No API_KEYS configured. Using development key only.")
+                logger.warning("No API_KEYS configured. Using development key only. DO NOT USE IN PRODUCTION!")
                 self.valid_keys = {'dev-key-DO-NOT-USE-IN-PRODUCTION'}
         else:
             self.valid_keys = api_keys

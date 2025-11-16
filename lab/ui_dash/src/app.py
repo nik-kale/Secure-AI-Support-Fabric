@@ -3,16 +3,35 @@ Simple web dashboard for AI Support Fabric Lab
 Displays telemetry statistics, findings, and remediation plans
 """
 import os
+import sys
 from datetime import datetime
 from flask import Flask, render_template_string, jsonify
 from flask_cors import CORS
 import requests
 
-app = Flask(__name__)
-CORS(app)
+# Add parent directory to path for lab.common imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
 
-# Gateway URL
+from lab.common.logging_config import setup_logging
+
+# Setup logging
+logger = setup_logging('ui_dash')
+
+app = Flask(__name__)
+
+# Secure CORS - restrict to allowed origins only
+allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+CORS(app, resources={
+    r"/*": {
+        "origins": allowed_origins,
+        "methods": ["GET"],
+        "allow_headers": ["Content-Type"],
+    }
+})
+
+# Gateway URL and API Key
 GATEWAY_URL = os.getenv('GATEWAY_URL', 'http://gateway:8080')
+API_KEY = os.getenv('API_KEY', '')
 
 # HTML template
 HTML_TEMPLATE = """
@@ -274,21 +293,36 @@ HTML_TEMPLATE = """
 
     <script>
         const GATEWAY_URL = window.location.protocol + '//' + window.location.hostname + ':8080';
+        const API_KEY = '{{ api_key }}';
+
+        // Helper function to create headers with API key
+        function getHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'X-API-Key': API_KEY
+            };
+        }
 
         async function loadData() {
             try {
                 // Load status
-                const statusResp = await fetch(`${GATEWAY_URL}/api/status`);
+                const statusResp = await fetch(`${GATEWAY_URL}/api/status`, {
+                    headers: getHeaders()
+                });
                 const statusData = await statusResp.json();
                 displayStatus(statusData);
 
                 // Load findings
-                const findingsResp = await fetch(`${GATEWAY_URL}/api/ai/findings?limit=20`);
+                const findingsResp = await fetch(`${GATEWAY_URL}/api/ai/findings?limit=20`, {
+                    headers: getHeaders()
+                });
                 const findingsData = await findingsResp.json();
                 displayFindings(findingsData);
 
                 // Load remediation
-                const remediationResp = await fetch(`${GATEWAY_URL}/api/ai/remediation?limit=20`);
+                const remediationResp = await fetch(`${GATEWAY_URL}/api/ai/remediation?limit=20`, {
+                    headers: getHeaders()
+                });
                 const remediationData = await remediationResp.json();
                 displayRemediation(remediationData);
             } catch (error) {
@@ -303,7 +337,8 @@ HTML_TEMPLATE = """
                 btn.textContent = 'Running Analysis...';
 
                 const resp = await fetch(`${GATEWAY_URL}/api/run-analysis`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: getHeaders()
                 });
                 const data = await resp.json();
 
@@ -428,7 +463,8 @@ HTML_TEMPLATE = """
 @app.route('/')
 def index():
     """Main dashboard page"""
-    return render_template_string(HTML_TEMPLATE)
+    logger.info("Dashboard page accessed")
+    return render_template_string(HTML_TEMPLATE, api_key=API_KEY)
 
 
 @app.route('/health')
