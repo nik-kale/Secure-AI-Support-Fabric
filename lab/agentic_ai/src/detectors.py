@@ -4,38 +4,7 @@ This is a simplified, rule-based "agentic" system for lab purposes
 """
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-
-class Finding:
-    """Represents a detected issue"""
-
-    def __init__(
-        self,
-        finding_id: str,
-        severity: str,
-        title: str,
-        description: str,
-        evidence: List[Dict[str, Any]],
-        recommendations: List[str]
-    ):
-        self.finding_id = finding_id
-        self.severity = severity
-        self.title = title
-        self.description = description
-        self.evidence = evidence
-        self.recommendations = recommendations
-        self.detected_at = datetime.utcnow().isoformat()
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert finding to dictionary"""
-        return {
-            'finding_id': self.finding_id,
-            'severity': self.severity,
-            'title': self.title,
-            'description': self.description,
-            'evidence': self.evidence,
-            'recommendations': self.recommendations,
-            'detected_at': self.detected_at
-        }
+from .models import Finding
 
 
 class LatencySpikeDetector:

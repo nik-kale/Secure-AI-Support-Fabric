@@ -130,42 +130,8 @@ class DetectorPlugin(ABC):
         pass
 
 
-# Import Finding from detectors to avoid circular import issues
-# In a real implementation, Finding would be in a shared models module
-try:
-    import sys
-    import os
-    sys.path.insert(0, os.path.dirname(__file__))
-    from detectors import Finding
-except ImportError:
-    # Fallback: define minimal Finding here
-    from dataclasses import dataclass as _dataclass
-    from typing import List as _List, Dict as _Dict, Any as _Any
-
-    @_dataclass
-    class Finding:
-        finding_id: str
-        severity: str
-        title: str
-        description: str
-        evidence: _List[_Dict[str, _Any]]
-        recommendations: _List[str]
-        detected_at: str = None
-
-        def __post_init__(self):
-            if self.detected_at is None:
-                self.detected_at = datetime.utcnow().isoformat()
-
-        def to_dict(self) -> _Dict[str, _Any]:
-            return {
-                'finding_id': self.finding_id,
-                'severity': self.severity,
-                'title': self.title,
-                'description': self.description,
-                'evidence': self.evidence,
-                'recommendations': self.recommendations,
-                'detected_at': self.detected_at
-            }
+# Import Finding from centralized models module
+from ..models import Finding
 
 
 class PluginError(Exception):

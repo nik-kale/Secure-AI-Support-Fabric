@@ -2,13 +2,32 @@
 REST API for the Agentic AI engine
 """
 import os
+import sys
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from engine import AIEngine
+
+# Add parent directory to path for lab.common imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
+
+from lab.common.auth import require_auth, setup_auth_error_handlers
+from .engine import AIEngine
 
 app = Flask(__name__)
-CORS(app)
+
+# Secure CORS - restrict to allowed origins only
+allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+CORS(app, resources={
+    r"/api/*": {
+        "origins": allowed_origins,
+        "methods": ["GET", "POST", "PUT", "DELETE"],
+        "allow_headers": ["Content-Type", "X-API-Key", "X-Request-ID"],
+        "expose_headers": ["X-Request-ID"]
+    }
+})
+
+# Setup authentication error handlers
+setup_auth_error_handlers(app)
 
 # Initialize AI engine
 ai_engine = AIEngine()
@@ -23,6 +42,7 @@ def health():
     })
 
 @app.route('/api/analyze', methods=['POST'])
+@require_auth
 def analyze():
     """Run full analysis and remediation cycle"""
     try:
@@ -38,6 +58,7 @@ def analyze():
         }), 500
 
 @app.route('/api/findings', methods=['GET'])
+@require_auth
 def get_findings():
     """Get detected findings"""
     try:
@@ -56,6 +77,7 @@ def get_findings():
         }), 500
 
 @app.route('/api/remediation', methods=['GET'])
+@require_auth
 def get_remediation():
     """Get remediation plans"""
     try:
@@ -74,6 +96,7 @@ def get_remediation():
         }), 500
 
 @app.route('/api/detect', methods=['POST'])
+@require_auth
 def detect():
     """Run detection only (no remediation)"""
     try:
@@ -91,6 +114,7 @@ def detect():
         }), 500
 
 @app.route('/api/remediate', methods=['POST'])
+@require_auth
 def remediate():
     """Generate remediation plans for existing findings"""
     try:

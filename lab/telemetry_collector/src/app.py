@@ -4,14 +4,33 @@ Ingests synthetic telemetry data (logs, metrics, config events)
 and stores them for analysis by the agentic AI engine.
 """
 import os
+import sys
 import json
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from storage.store import TelemetryStore
+
+# Add parent directory to path for lab.common imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
+
+from lab.common.auth import require_auth, setup_auth_error_handlers
+from .storage.store import TelemetryStore
 
 app = Flask(__name__)
-CORS(app)
+
+# Secure CORS - restrict to allowed origins only
+allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+CORS(app, resources={
+    r"/api/*": {
+        "origins": allowed_origins,
+        "methods": ["GET", "POST"],
+        "allow_headers": ["Content-Type", "X-API-Key", "X-Request-ID"],
+        "expose_headers": ["X-Request-ID"]
+    }
+})
+
+# Setup authentication error handlers
+setup_auth_error_handlers(app)
 
 # Initialize storage
 store = TelemetryStore(storage_path=os.getenv('TELEMETRY_STORAGE_PATH', '/data/telemetry.db'))
@@ -26,6 +45,7 @@ def health():
     })
 
 @app.route('/api/telemetry/logs', methods=['POST'])
+@require_auth
 def ingest_logs():
     """Ingest log telemetry"""
     try:
@@ -49,6 +69,7 @@ def ingest_logs():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/telemetry/metrics', methods=['POST'])
+@require_auth
 def ingest_metrics():
     """Ingest metric telemetry"""
     try:
@@ -72,6 +93,7 @@ def ingest_metrics():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/telemetry/config', methods=['POST'])
+@require_auth
 def ingest_config():
     """Ingest configuration change events"""
     try:
@@ -95,6 +117,7 @@ def ingest_config():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/telemetry/query', methods=['GET'])
+@require_auth
 def query_telemetry():
     """Query stored telemetry"""
     try:
@@ -117,6 +140,7 @@ def query_telemetry():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/telemetry/stats', methods=['GET'])
+@require_auth
 def get_stats():
     """Get telemetry statistics"""
     try:

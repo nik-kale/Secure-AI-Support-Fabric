@@ -6,8 +6,15 @@ Uses sklearn IsolationForest for unsupervised anomaly detection
 import numpy as np
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-import pickle
+import hashlib
 from pathlib import Path
+
+try:
+    import joblib
+    JOBLIB_AVAILABLE = True
+except ImportError:
+    JOBLIB_AVAILABLE = False
+    print("WARNING: joblib not installed. Model persistence disabled. Install with: pip install joblib")
 
 try:
     from sklearn.ensemble import IsolationForest
@@ -192,28 +199,80 @@ class MLAnomalyDetector:
         )
 
     def save(self, path: str):
-        """Save trained model to disk"""
+        """
+        Save trained model to disk with integrity verification
+
+        Uses joblib instead of pickle for security and adds SHA-256 signature
+        """
         if not self.is_trained:
             raise RuntimeError("Cannot save untrained model")
+
+        if not JOBLIB_AVAILABLE:
+            raise RuntimeError("joblib not installed. Cannot save model.")
 
         model_data = {
             'model': self.model,
             'scaler': self.scaler,
-            'feature_names': self.feature_names
+            'feature_names': self.feature_names,
+            'version': '3.0.0'
         }
 
-        with open(path, 'wb') as f:
-            pickle.dump(model_data, f)
+        # Save with joblib (safer than pickle)
+        joblib.dump(model_data, path)
+
+        # Create SHA-256 signature for integrity verification
+        with open(path, 'rb') as f:
+            content = f.read()
+        signature = hashlib.sha256(content).hexdigest()
+
+        # Save signature alongside model
+        signature_path = f'{path}.sig'
+        with open(signature_path, 'w') as f:
+            f.write(signature)
 
     def load(self, path: str):
-        """Load trained model from disk"""
+        """
+        Load trained model from disk with integrity verification
+
+        Verifies SHA-256 signature before loading
+        """
+        if not JOBLIB_AVAILABLE:
+            raise RuntimeError("joblib not installed. Cannot load model.")
+
+        # Verify signature first
+        signature_path = f'{path}.sig'
+
+        # Read current file and compute signature
         with open(path, 'rb') as f:
-            model_data = pickle.load(f)
+            content = f.read()
+        computed_signature = hashlib.sha256(content).hexdigest()
+
+        # Compare with stored signature
+        try:
+            with open(signature_path, 'r') as f:
+                expected_signature = f.read().strip()
+
+            if computed_signature != expected_signature:
+                raise SecurityError(
+                    "Model file signature mismatch. File may be corrupted or tampered with."
+                )
+        except FileNotFoundError:
+            raise SecurityError(
+                "Model signature file not found. Cannot verify model integrity."
+            )
+
+        # Signature verified, safe to load
+        model_data = joblib.load(path)
 
         self.model = model_data['model']
         self.scaler = model_data['scaler']
         self.feature_names = model_data['feature_names']
         self.is_trained = True
+
+
+class SecurityError(Exception):
+    """Raised when security checks fail"""
+    pass
 
 
 # Example usage

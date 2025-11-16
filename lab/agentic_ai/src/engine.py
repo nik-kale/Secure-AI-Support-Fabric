@@ -5,8 +5,9 @@ This is a simplified "agentic" system using rules and mock AI logic
 import os
 import requests
 from typing import List, Dict, Any
-from detectors import AnomalyDetectorEngine, Finding
-from remediation import RemediationEngine, RemediationPlan
+from .detectors import AnomalyDetectorEngine
+from .remediation import RemediationEngine
+from .models import Finding, RemediationPlan
 
 class AIEngine:
     """Main AI-Support Fabric engine"""
