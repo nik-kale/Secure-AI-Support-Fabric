@@ -1,0 +1,9 @@
+# LLM Provider Dependencies (optional)
+anthropic>=0.18.0
+openai>=1.10.0
+
+# For async support
+aiohttp>=3.9.0
+
+# Response caching
+diskcache>=5.6.3

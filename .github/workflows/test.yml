@@ -1,0 +1,187 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop, claude/** ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r tests/requirements.txt
+        pip install -r lab/telemetry_collector/requirements.txt
+        pip install -r lab/agentic_ai/requirements.txt
+        pip install -r lab/gateway/requirements.txt
+
+    - name: Run unit tests
+      run: |
+        pytest tests/unit/ -v --cov=lab --cov-report=xml --cov-report=term
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  integration-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r tests/requirements.txt
+
+    - name: Start services with Docker Compose
+      run: |
+        docker-compose up -d
+        sleep 30  # Wait for services to be ready
+
+    - name: Check service health
+      run: |
+        curl --retry 10 --retry-delay 3 --retry-connrefused http://localhost:8080/health
+
+    - name: Run integration tests
+      run: |
+        pytest tests/integration/ -v --tb=short
+
+    - name: Show service logs on failure
+      if: failure()
+      run: |
+        docker-compose logs
+
+    - name: Cleanup
+      if: always()
+      run: |
+        docker-compose down -v
+
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install security tools
+      run: |
+        pip install bandit safety
+
+    - name: Run Bandit security scan
+      run: |
+        bandit -r lab/ -f json -o bandit-report.json || true
+        bandit -r lab/ -f screen
+
+    - name: Check dependencies for vulnerabilities
+      run: |
+        safety check --json || true
+        safety check
+
+    - name: Upload Bandit report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: bandit-security-report
+        path: bandit-report.json
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install linting tools
+      run: |
+        pip install flake8 black isort
+
+    - name: Run flake8
+      run: |
+        flake8 lab/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 lab/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Check code formatting with black
+      run: |
+        black --check lab/ || true
+
+    - name: Check import sorting with isort
+      run: |
+        isort --check-only lab/ || true
+
+  docker-build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build telemetry_collector
+      uses: docker/build-push-action@v5
+      with:
+        context: ./lab/telemetry_collector
+        push: false
+        tags: ai-fabric-lab/telemetry_collector:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build agentic_ai
+      uses: docker/build-push-action@v5
+      with:
+        context: ./lab/agentic_ai
+        push: false
+        tags: ai-fabric-lab/agentic_ai:test
+
+    - name: Build gateway
+      uses: docker/build-push-action@v5
+      with:
+        context: ./lab/gateway
+        push: false
+        tags: ai-fabric-lab/gateway:test
+
+    - name: Build ui_dash
+      uses: docker/build-push-action@v5
+      with:
+        context: ./lab/ui_dash
+        push: false
+        tags: ai-fabric-lab/ui_dash:test

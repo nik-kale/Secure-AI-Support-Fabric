@@ -2,6 +2,19 @@
 
 **A local lab to explore AI-driven proactive support using synthetic telemetry, agentic detection, and guided remediation.**
 
+## 🆕 What's New in v2.0 - Next Level Edition
+
+**Major upgrades and new features:**
+
+- ✅ **Comprehensive Testing Suite** - 75%+ test coverage, automated CI/CD
+- ✅ **Real LLM Integration** - Anthropic Claude, OpenAI GPT, Local models
+- ✅ **Plugin System** - Hot-loadable custom detectors
+- ✅ **ML Anomaly Detection** - Sklearn-based unsupervised learning
+- ✅ **Python SDK** - Fluent API for easy integration
+- ✅ **GitHub Actions CI/CD** - Automated testing and security scanning
+
+**📖 [See full improvements →](IMPROVEMENTS.md)** | **🚀 [Quick Start Guide →](QUICKSTART.md)**
+
 ---
 
 ## 1. Motivation
