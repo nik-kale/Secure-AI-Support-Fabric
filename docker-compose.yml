@@ -42,6 +42,47 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  otel_collector:
+    build:
+      context: ./lab/otel_collector
+      dockerfile: Dockerfile
+    container_name: otel_collector
+    ports:
+      - "4318:4318"  # OTLP HTTP
+    environment:
+      - DEBUG=${DEBUG:-false}
+      - OTEL_STORAGE_PATH=/data/otel.db
+      - API_KEYS=${API_KEYS}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+    volumes:
+      - otel_data:/data
+    networks:
+      - lab_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4318/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   agentic_ai:
     build:
       context: ./lab/agentic_ai
@@ -181,3 +222,4 @@ networks:
 
 volumes:
   telemetry_data:
+  otel_data:
