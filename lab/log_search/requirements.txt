@@ -1,0 +1,6 @@
+# Core
+flask==3.0.0
+flask-cors==4.0.0
+
+# Logging
+python-json-logger==2.0.7

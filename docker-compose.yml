@@ -216,6 +216,83 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # V2.2: Distributed Tracing Visualization
+  trace_visualizer:
+    build:
+      context: ./lab/trace_visualizer
+      dockerfile: Dockerfile
+    container_name: trace_visualizer
+    ports:
+      - "8085:8085"
+    environment:
+      - DEBUG=${DEBUG:-false}
+      - OTEL_COLLECTOR_URL=http://otel_collector:4318
+      - API_KEYS=${API_KEYS}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+    depends_on:
+      - otel_collector
+    networks:
+      - lab_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+
+  # V2.7: Full-text Log Search
+  log_search:
+    build:
+      context: ./lab/log_search
+      dockerfile: Dockerfile
+    container_name: log_search
+    ports:
+      - "8086:8086"
+    environment:
+      - DEBUG=${DEBUG:-false}
+      - LOG_STORAGE_PATH=/data/logs.db
+      - API_KEYS=${API_KEYS}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+    volumes:
+      - log_data:/data
+    networks:
+      - lab_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+    security_opt:
+      - no-new-privileges:true
+
+  # V4.2: Multi-channel Notification Service
+  notification_service:
+    build:
+      context: ./lab/notification_service
+      dockerfile: Dockerfile
+    container_name: notification_service
+    ports:
+      - "8087:8087"
+    environment:
+      - DEBUG=${DEBUG:-false}
+      - API_KEYS=${API_KEYS}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - TEAMS_WEBHOOK_URL=${TEAMS_WEBHOOK_URL}
+    networks:
+      - lab_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+
 networks:
   lab_network:
     driver: bridge
@@ -223,3 +300,4 @@ networks:
 volumes:
   telemetry_data:
   otel_data:
+  log_data:
