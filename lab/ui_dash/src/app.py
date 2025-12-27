@@ -6,7 +6,7 @@ import os
 import sys
 import secrets
 from datetime import datetime
-from flask import Flask, render_template_string, jsonify, g
+from flask import Flask, render_template_string, jsonify, request, g
 from flask_cors import CORS
 import requests
 
@@ -31,7 +31,7 @@ allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000').split(',
 CORS(app, resources={
     r"/*": {
         "origins": allowed_origins,
-        "methods": ["GET"],
+        "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type"],
     }
 })
@@ -299,8 +299,8 @@ HTML_TEMPLATE = """
     </div>
 
     <script nonce="{{ nonce }}">
-        const GATEWAY_URL = window.location.protocol + '//' + window.location.hostname + ':8080';
-        const API_KEY = '{{ api_key }}';
+        // Use relative path for proxy endpoints
+        const API_BASE = '/proxy/api';
 
         // XSS Protection Utility
         function escapeHtml(text) {
@@ -313,34 +313,20 @@ HTML_TEMPLATE = """
                 .replace(/'/g, "&#039;");
         }
 
-        // Helper function to create headers with API key
-        function getHeaders() {
-            return {
-                'Content-Type': 'application/json',
-                'X-API-Key': API_KEY
-            };
-        }
-
         async function loadData() {
             try {
                 // Load status
-                const statusResp = await fetch(`${GATEWAY_URL}/api/status`, {
-                    headers: getHeaders()
-                });
+                const statusResp = await fetch(`${API_BASE}/status`);
                 const statusData = await statusResp.json();
                 displayStatus(statusData);
 
                 // Load findings
-                const findingsResp = await fetch(`${GATEWAY_URL}/api/ai/findings?limit=20`, {
-                    headers: getHeaders()
-                });
+                const findingsResp = await fetch(`${API_BASE}/ai/findings?limit=20`);
                 const findingsData = await findingsResp.json();
                 displayFindings(findingsData);
 
                 // Load remediation
-                const remediationResp = await fetch(`${GATEWAY_URL}/api/ai/remediation?limit=20`, {
-                    headers: getHeaders()
-                });
+                const remediationResp = await fetch(`${API_BASE}/ai/remediation?limit=20`);
                 const remediationData = await remediationResp.json();
                 displayRemediation(remediationData);
             } catch (error) {
@@ -354,9 +340,11 @@ HTML_TEMPLATE = """
                 btn.disabled = true;
                 btn.textContent = 'Running Analysis...';
 
-                const resp = await fetch(`${GATEWAY_URL}/api/run-analysis`, {
+                const resp = await fetch(`${API_BASE}/run-analysis`, {
                     method: 'POST',
-                    headers: getHeaders()
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 });
                 const data = await resp.json();
 
@@ -482,7 +470,8 @@ HTML_TEMPLATE = """
 def index():
     """Main dashboard page"""
     logger.info("Dashboard page accessed")
-    return render_template_string(HTML_TEMPLATE, api_key=API_KEY, nonce=g.nonce)
+    # No longer passing api_key to the template, but passing nonce
+    return render_template_string(HTML_TEMPLATE, nonce=g.nonce)
 
 
 @app.route('/health')
@@ -493,6 +482,42 @@ def health():
         'service': 'ui_dash',
         'timestamp': datetime.utcnow().isoformat()
     })
+
+
+@app.route('/proxy/api/<path:path>', methods=['GET', 'POST'])
+def proxy_request(path):
+    """Proxy requests to the backend gateway"""
+    target_url = f"{GATEWAY_URL}/api/{path}"
+    
+    # Forward parameters
+    params = request.args
+    
+    # Headers - inject API key
+    headers = {
+        'X-API-Key': API_KEY,
+        'Content-Type': 'application/json'
+    }
+    
+    try:
+        if request.method == 'GET':
+            resp = requests.get(target_url, headers=headers, params=params, timeout=10)
+        elif request.method == 'POST':
+            # Check if json data exists
+            json_data = request.get_json(silent=True) or {}
+            resp = requests.post(target_url, headers=headers, json=json_data, timeout=10)
+        else:
+            return jsonify({'error': 'Method not supported'}), 405
+            
+        # Return response from upstream
+        try:
+            return jsonify(resp.json()), resp.status_code
+        except ValueError:
+            # In case response is not JSON
+            return resp.content, resp.status_code
+            
+    except requests.RequestException as e:
+        logger.error(f"Proxy error: {str(e)}")
+        return jsonify({'error': 'Backend service unavailable'}), 503
 
 
 if __name__ == '__main__':
