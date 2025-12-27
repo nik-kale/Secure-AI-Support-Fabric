@@ -17,12 +17,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
 from lab.common.auth import require_auth, setup_auth_error_handlers
 from lab.common.logging_config import setup_logging
 from lab.common.tracing import setup_tracing
+from lab.common.metrics import setup_metrics
 
 # Setup logging
 logger = setup_logging('gateway')
 
 app = Flask(__name__)
 setup_tracing('gateway', app)
+setup_metrics(app)
 
 swagger = Swagger(app, template={
     "swagger": "2.0",
