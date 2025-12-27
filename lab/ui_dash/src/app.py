@@ -4,8 +4,9 @@ Displays telemetry statistics, findings, and remediation plans
 """
 import os
 import sys
+import secrets
 from datetime import datetime
-from flask import Flask, render_template_string, jsonify
+from flask import Flask, render_template_string, jsonify, g
 from flask_cors import CORS
 import requests
 
@@ -13,11 +14,17 @@ import requests
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
 
 from lab.common.logging_config import setup_logging
+from lab.common.security_headers import setup_security_headers
 
 # Setup logging
 logger = setup_logging('ui_dash')
 
 app = Flask(__name__)
+setup_security_headers(app)
+
+@app.before_request
+def generate_nonce():
+    g.nonce = secrets.token_hex(16)
 
 # Secure CORS - restrict to allowed origins only
 allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
@@ -41,7 +48,7 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Support Fabric - Lab Dashboard</title>
-    <style>
+    <style nonce="{{ nonce }}">
         * {
             margin: 0;
             padding: 0;
@@ -291,9 +298,20 @@ HTML_TEMPLATE = """
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ nonce }}">
         const GATEWAY_URL = window.location.protocol + '//' + window.location.hostname + ':8080';
         const API_KEY = '{{ api_key }}';
+
+        // XSS Protection Utility
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
 
         // Helper function to create headers with API key
         function getHeaders() {
@@ -413,11 +431,11 @@ HTML_TEMPLATE = """
             }
 
             const findingsHtml = findings.map(f => `
-                <div class="finding ${f.severity}">
-                    <span class="finding-severity severity-${f.severity}">${f.severity}</span>
-                    <div class="finding-title">${f.title}</div>
-                    <div class="finding-desc">${f.description}</div>
-                    <div class="timestamp">Detected: ${f.detected_at}</div>
+                <div class="finding ${escapeHtml(f.severity)}">
+                    <span class="finding-severity severity-${escapeHtml(f.severity)}">${escapeHtml(f.severity)}</span>
+                    <div class="finding-title">${escapeHtml(f.title)}</div>
+                    <div class="finding-desc">${escapeHtml(f.description)}</div>
+                    <div class="timestamp">Detected: ${escapeHtml(f.detected_at)}</div>
                 </div>
             `).join('');
 
@@ -434,15 +452,15 @@ HTML_TEMPLATE = """
 
             const remediationHtml = plans.map(plan => `
                 <div class="remediation">
-                    <div class="remediation-title">${plan.title}</div>
+                    <div class="remediation-title">${escapeHtml(plan.title)}</div>
                     ${plan.steps.slice(0, 5).map(step => `
                         <div class="step">
-                            <span class="step-number">${step.step}</span>
-                            <strong>${step.action}</strong>: ${step.description}
+                            <span class="step-number">${escapeHtml(step.step)}</span>
+                            <strong>${escapeHtml(step.action)}</strong>: ${escapeHtml(step.description)}
                         </div>
                     `).join('')}
                     ${plan.steps.length > 5 ? `<div class="step">... and ${plan.steps.length - 5} more steps</div>` : ''}
-                    <div class="timestamp">Created: ${plan.created_at}</div>
+                    <div class="timestamp">Created: ${escapeHtml(plan.created_at)}</div>
                 </div>
             `).join('');
 
@@ -464,7 +482,7 @@ HTML_TEMPLATE = """
 def index():
     """Main dashboard page"""
     logger.info("Dashboard page accessed")
-    return render_template_string(HTML_TEMPLATE, api_key=API_KEY)
+    return render_template_string(HTML_TEMPLATE, api_key=API_KEY, nonce=g.nonce)
 
 
 @app.route('/health')

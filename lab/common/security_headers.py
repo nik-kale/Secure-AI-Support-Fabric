@@ -3,7 +3,7 @@ Security headers middleware for AI Support Fabric Lab
 
 Adds security headers to all HTTP responses
 """
-from flask import Flask
+from flask import Flask, g
 from typing import Callable
 
 
@@ -33,7 +33,17 @@ def add_security_headers(response):
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     
     # Content Security Policy
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+    # Check if a nonce is available in the request context
+    csp = "default-src 'self'"
+    nonce = getattr(g, 'nonce', None)
+    
+    if nonce:
+        csp += f"; script-src 'self' 'nonce-{nonce}'; style-src 'self' 'nonce-{nonce}'"
+    else:
+        # Fallback for services that don't generate nonces yet
+        csp += "; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+        
+    response.headers['Content-Security-Policy'] = csp
     
     # Referrer policy
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
