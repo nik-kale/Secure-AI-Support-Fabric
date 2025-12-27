@@ -78,6 +78,14 @@ flasgger==0.9.7.1
 # python-socketio==5.10.0
 
 # -------------------------------------------------------------------
+# OBSERVABILITY
+# -------------------------------------------------------------------
+opentelemetry-distro==0.42b0
+opentelemetry-exporter-otlp==1.21.0
+opentelemetry-instrumentation-flask==0.42b0
+opentelemetry-instrumentation-requests==0.42b0
+
+# -------------------------------------------------------------------
 # NOTES
 # -------------------------------------------------------------------
 # Python Version Required: 3.11+
