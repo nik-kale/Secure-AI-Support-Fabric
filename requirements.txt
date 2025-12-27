@@ -61,7 +61,7 @@ mypy==1.7.1
 # prometheus-flask-exporter==0.22.4
 
 # API Documentation
-# flasgger==0.9.7.1
+flasgger==0.9.7.1
 
 # Production WSGI Server
 # gunicorn==21.2.0

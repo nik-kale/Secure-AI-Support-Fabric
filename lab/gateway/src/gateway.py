@@ -8,6 +8,7 @@ import uuid
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flasgger import Swagger
 import requests
 
 # Add parent directory to path for lab.common imports
@@ -20,6 +21,25 @@ from lab.common.logging_config import setup_logging
 logger = setup_logging('gateway')
 
 app = Flask(__name__)
+
+swagger = Swagger(app, template={
+    "swagger": "2.0",
+    "info": {
+        "title": "Secure AI Support Fabric API",
+        "description": "API Gateway for AI Support Fabric",
+        "version": "1.0.0"
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "X-API-Key",
+            "in": "header"
+        }
+    },
+    "security": [
+        {"ApiKeyAuth": []}
+    ]
+})
 
 # Secure CORS - restrict to allowed origins only
 allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
@@ -58,7 +78,16 @@ def add_context_headers(headers: dict = None) -> dict:
 
 @app.route('/health', methods=['GET'])
 def health():
-    """Health check endpoint"""
+    """Health check endpoint
+    ---
+    tags:
+      - System
+    responses:
+      200:
+        description: System is healthy
+      503:
+        description: System is degraded
+    """
     # Check health of all services
     services = {}
 
@@ -88,7 +117,22 @@ def health():
 @app.route('/api/telemetry/<path:subpath>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @require_auth
 def proxy_telemetry(subpath):
-    """Proxy requests to telemetry collector"""
+    """Proxy requests to telemetry collector
+    ---
+    tags:
+      - Telemetry
+    parameters:
+      - name: subpath
+        in: path
+        type: string
+        required: true
+        description: Path to telemetry resource
+    responses:
+      200:
+        description: Success
+      503:
+        description: Service unavailable
+    """
     try:
         headers = add_context_headers(dict(request.headers))
         # Forward API key to backend service
@@ -120,7 +164,22 @@ def proxy_telemetry(subpath):
 @app.route('/api/ai/<path:subpath>', methods=['GET', 'POST'])
 @require_auth
 def proxy_ai(subpath):
-    """Proxy requests to agentic AI engine"""
+    """Proxy requests to agentic AI engine
+    ---
+    tags:
+      - AI Engine
+    parameters:
+      - name: subpath
+        in: path
+        type: string
+        required: true
+        description: Path to AI resource
+    responses:
+      200:
+        description: Success
+      503:
+        description: Service unavailable
+    """
     try:
         headers = add_context_headers(dict(request.headers))
         # Forward API key to backend service
@@ -148,7 +207,16 @@ def proxy_ai(subpath):
 @app.route('/api/status', methods=['GET'])
 @require_auth
 def get_status():
-    """Get overall system status"""
+    """Get overall system status
+    ---
+    tags:
+      - Dashboard
+    responses:
+      200:
+        description: System status retrieved successfully
+      500:
+        description: Internal server error
+    """
     try:
         # Get telemetry stats
         headers = add_context_headers()
@@ -188,7 +256,16 @@ def get_status():
 @app.route('/api/run-analysis', methods=['POST'])
 @require_auth
 def run_analysis():
-    """Trigger a full analysis cycle"""
+    """Trigger a full analysis cycle
+    ---
+    tags:
+      - Dashboard
+    responses:
+      200:
+        description: Analysis started
+      500:
+        description: Internal server error
+    """
     try:
         headers = add_context_headers()
         # Forward API key to backend service
